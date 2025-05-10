@@ -1,3 +1,10 @@
 __pycache__/
 *.pyc
 .env
+
+# Kafka log files
+kafka/**/logs/
+kafka/**/checkpoint
+kafka/**/offset*
+kafka/**/replication*
+kafka/**/connect_configs*
