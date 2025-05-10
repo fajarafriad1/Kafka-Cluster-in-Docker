@@ -13,7 +13,7 @@ test-topic 1 0
 __consumer_offsets 49 1
 __consumer_offsets 40 0
 __consumer_offsets 27 0
-connect_configs 0 2
+connect_configs 0 3
 connect_offsets 11 0
 __consumer_offsets 12 0
 __consumer_offsets 36 0
