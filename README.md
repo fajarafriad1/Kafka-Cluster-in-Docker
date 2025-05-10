@@ -44,7 +44,7 @@ project-root/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/fajarafriad1/kafka-cluster-docker.git
+git clone https://github.com/fajarafriad1/Kafka-Cluster-in-Docker.git
 cd kafka-docker-cluster
 ```
 
