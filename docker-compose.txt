@@ -1,0 +1,294 @@
+services:
+
+  kafka-zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    hostname: kafka-zookeeper
+    container_name: kafka-zookeeper
+    ports:
+      - 2181:2181
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: echo srvr | nc localhost 2181 || exit 1
+      start_period: 10s
+      retries: 20
+      interval: 10s
+    networks:
+      default:
+        ipv4_address: 172.30.9.1
+
+  kafka-broker-1:
+    image: confluentinc/cp-kafka:7.6.1
+    hostname: kafka-broker-1
+    container_name: kafka-broker-1
+    depends_on:
+      kafka-zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-broker-1:19092,EXTERNAL://host.docker.internal:9092,DOCKER://host.docker.internal:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,DOCKER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper:2181
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    volumes:
+      - ./kafka/kafka-data-broker-1:/var/lib/kafka/data
+    healthcheck:
+      test: "nc -z localhost 9092 && nc -z localhost 29092 || exit 1"
+      start_period: 40s
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      default:
+        ipv4_address: 172.30.9.2
+
+  kafka-broker-2:
+    image: confluentinc/cp-kafka:7.6.1
+    hostname: kafka-broker-2
+    container_name: kafka-broker-2
+    depends_on:
+      kafka-zookeeper:
+        condition: service_healthy
+    ports:
+      - "9093:9093"
+      - "29093:29093"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-broker-2:19093,EXTERNAL://host.docker.internal:9093,DOCKER://host.docker.internal:29093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,DOCKER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper:2181
+      KAFKA_BROKER_ID: 2
+      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    volumes:
+      - ./kafka/kafka-data-broker-2:/var/lib/kafka/data
+    healthcheck:
+      test: "nc -z localhost 9093 && nc -z localhost 29093 || exit 1"
+      start_period: 40s
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      default:
+        ipv4_address: 172.30.9.3
+
+  kafka-broker-3:
+    image: confluentinc/cp-kafka:7.6.1
+    hostname: kafka-broker-3
+    container_name: kafka-broker-3
+    depends_on:
+      kafka-zookeeper:
+        condition: service_healthy
+    ports:
+      - "9094:9094"
+      - "29094:29094"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-broker-3:19094,EXTERNAL://host.docker.internal:9094,DOCKER://host.docker.internal:29094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,DOCKER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper:2181
+      KAFKA_BROKER_ID: 3
+      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    volumes:
+      - ./kafka/kafka-data-broker-3:/var/lib/kafka/data
+    healthcheck:
+      test: "nc -z localhost 9094 && nc -z localhost 29094 || exit 1"
+      start_period: 40s
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      default:
+        ipv4_address: 172.30.9.4
+
+
+  kafka-schema-registry:
+    image: confluentinc/cp-schema-registry:7.6.1
+    hostname: kafka-schema-registry
+    container_name: kafka-schema-registry
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+    ports:
+      - 8081:8081
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: kafka-schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka-broker-2:9093
+    healthcheck:
+      test: |
+        curl --fail --silent http://localhost:8081/subjects --output /dev/null || exit 1
+      start_period: 90s
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      default:
+        ipv4_address: 172.30.9.6
+
+  kafka-debezium:
+    image: debezium/connect:2.3
+    container_name: kafka-debezium
+    hostname: kafka-debezium
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+    ports:
+      - 8083:8083
+    environment:
+      BOOTSTRAP_SERVERS: kafka-broker-1:19092,kafka-broker-2:19093,kafka-broker-3:19094
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: connect_configs
+      STATUS_STORAGE_TOPIC: connect_statuses
+      OFFSET_STORAGE_TOPIC: connect_offsets
+      ENABLE_DEBEZIUM_SCRIPTING: "true"
+    volumes:
+      - ./kafka/connectors:/kafka/connectors
+      - ./kafka/plugins:/kafka/plugins
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --silent
+        - --fail
+        - -X
+        - GET
+        - http://localhost:8083/connectors
+      start_period: 90s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      default:
+        ipv4_address: 172.30.9.5
+
+
+
+  kafka-rest-proxy:
+    image: confluentinc/cp-kafka-rest:7.6.1
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+    ports:
+      - 8082:8082
+    hostname: kafka-rest-proxy
+    container_name: kafka-rest-proxy
+    environment:
+      KAFKA_REST_HOST_NAME: kafka-rest-proxy
+      KAFKA_REST_BOOTSTRAP_SERVERS: kafka-broker-1:19092,kafka-broker-2:19093,kafka-broker-3:19094
+      KAFKA_REST_LISTENERS: http://0.0.0.0:8082
+    healthcheck:
+      test: curl --fail --silent http://localhost:8082/topics --output /dev/null || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 50s
+    networks:
+      default:
+        ipv4_address: 172.30.9.7
+
+
+
+  kafka-redpanda:
+    image: docker.redpanda.com/redpandadata/console:v2.3.8
+    container_name: kafka-redpanda
+    restart: on-failure
+    entrypoint: /bin/sh
+    command: -c "echo \"$$CONSOLE_CONFIG_FILE\" > /tmp/config.yml; /app/console"
+    environment:
+      CONFIG_FILEPATH: /tmp/config.yml
+      CONSOLE_CONFIG_FILE: |
+        kafka:
+          brokers: ["kafka-broker-1:19092","kafka-broker-2:19093","kafka-broker-3:19094"]
+          schemaRegistry:
+            enabled: true
+            urls: ["http://kafka-schema-registry:8081"]
+        connect:
+          enabled: true
+          clusters:
+            - name: production
+              url: http://kafka-debezium:8083
+    ports:
+      - 9080:8080
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+      kafka-schema-registry:
+        condition: service_healthy
+      kafka-rest-proxy:
+        condition: service_healthy
+      kafka-debezium:
+        condition: service_healthy
+    networks:
+      default:
+        ipv4_address: 172.30.9.8
+
+  kafka-provectus-kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-provectus-kafka-ui
+    hostname: kafka-provectus-kafka-ui
+    ports:
+      - 8088:8080
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-broker-1:19092,kafka-broker-2:19093,kafka-broker-3:19094
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://kafka-schema-registry:8081
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: debezium
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://kafka-debezium:8083
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+      kafka-schema-registry:
+        condition: service_healthy
+      kafka-debezium:
+        condition: service_healthy        
+    networks:
+      default:
+        ipv4_address: 172.30.9.9
+
+networks:
+  default:
+    name: network-docker_default
+    external: true
+
+volumes:
+  kafka:
