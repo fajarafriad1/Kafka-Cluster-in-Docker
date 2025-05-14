@@ -26,7 +26,7 @@ This repository contains a full-featured Apache Kafka development setup using Do
 
 ---
 
-# 🗂️ Folder Structure
+## 🗂️ Folder Structure
 
 ```text
 project-root/
