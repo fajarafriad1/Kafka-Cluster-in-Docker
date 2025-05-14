@@ -48,16 +48,7 @@ git clone https://github.com/fajarafriad1/Kafka-Cluster-in-Docker.git
 cd kafka-docker-cluster
 ```
 
-### 2. Prepare the kafka directory
-Create and set permissions on the host kafka directory before running docker-compose up -d (required only if the container fails to create it).
-
-```bash
-mkdir -p kafka/{kafka-data-broker-1,kafka-data-broker-2,kafka-data-broker-3,connectors,plugins}
-chmod -R 777 kafka
-```
-This ensures each broker’s data directory and the connectors/plugins folders are available and writable by Docker.
-
-#### 3. Launch the Cluster
+#### 2. Launch the Cluster
 ```bash
 docker-compose up -d
 ```
@@ -70,7 +61,7 @@ Docker will:
 5. Fire up REST Proxy
 6. Spin up Redpanda Console
 
-### 4. Creating Test Topics
+### 3. Creating Test Topics
 
 #### 1. Using CLI to Create Topics
 
